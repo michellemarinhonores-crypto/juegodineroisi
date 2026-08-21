@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruta Urbana: Juego de Dinero</title>
+<style>
+  :root {
+    --bg-color: #f0f4f8;
+    --card-bg: #ffffff;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 10px;
+    color: #202124;
+    box-sizing: border-box;
+  }
+
+  /* Modo Pantalla Completa */
+  :fullscreen {
+    background-color: #f0f4f8;
+    padding: 15px;
+    overflow-y: auto;
+  }
+  :-webkit-full-screen {
+    background-color: #f0f4f8;
+    padding: 15px;
+    overflow-y: auto;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    color: #1a73e8;
+    font-size: 20px;
+    margin: 0;
+  }
+
+  .btn-fullscreen {
+    background-color: #5f6368;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  p.subtitle {
+    color: #5f6368;
+    font-size: 12px;
+    margin-top: 2px;
+    margin-bottom: 10px;
+  }
+
+  .players-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .p-card {
+    padding: 8px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border: 2px solid #dadce0;
+    text-align: center;
+  }
+
+  .p-card.active-turn {
+    border-color: #1a73e8;
+    background: #e8f0fe;
+  }
+
+  .p-name { font-weight: bold; font-size: 13px; }
+  .p-balance { font-size: 15px; font-weight: bold; color: #1257b0; margin-top: 2px; }
+  
+  .controls {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  button.btn {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.btn:active { background-color: #1557b0; }
+  button.btn-ok { background-color: #34a853; margin-right: 5px; }
+  button.btn-fail { background-color: #ea4335; }
+  
+  .challenge-box {
+    background-color: #feefc3;
+    border: 2px solid #fbbc04;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+    text-align: center;
+    display: none;
+  }
+  .challenge-title { font-weight: bold; font-size: 13px; color: #b06000; margin-bottom: 4px; }
+  .challenge-desc { font-size: 12px; margin-bottom: 8px; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .tile {
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    padding: 4px 2px;
+    min-height: 60px;
+    background: #f8f9fa;
+    text-align: center;
+    font-size: 9px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tile-icon { font-size: 16px; margin: 1px 0; }
+  .tile-num { font-weight: bold; color: #5f6368; }
+  .tile.oca { background-color: #e6f4ea; border-color: #34a853; }
+  .tile.challenge { background-color: #feefc3; border-color: #fbbc04; }
+  .tile.start, .tile.meta { background-color: #e8f0fe; border-color: #1a73e8; font-weight: bold; }
+  
+  .tags-container {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .player-tag {
+    color: white;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 1px 3px;
+    border-radius: 3px;
+  }
+  .tag-p1 { background: #ea4335; }
+  .tag-p2 { background: #9c27b0; }
+
+  .log-box {
+    background: #f1f3f4;
+    border-radius: 8px;
+    padding: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 11px;
+  }
+  .log-entry {
+    margin-bottom: 3px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="game-container">
+  <div class="header-bar">
+    <h1>Ruta Urbana: Juego de Dinero 🏙️</h1>
+    <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ Pantalla Completa</button>
+  </div>
+  <p class="subtitle">Aprende a gestionar tu presupuesto compitiendo en pareja</p>
+
+  <div class="players-dashboard">
+    <div class="p-card active-turn" id="card-p0">
+      <div class="p-name">🔴 Isidora</div>
+      <div class="p-balance">$<span id="bal-0">20000</span></div>
+    </div>
+    <div class="p-card" id="card-p1">
+      <div class="p-name">🟣 Michu</div>
+      <div class="p-balance">$<span id="bal-1">20000</span></div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls-panel">
+    <button class="btn" id="roll-btn" onclick="rollDice()">Lanzar Dado 🎲</button>
+    <div id="turn-info" style="font-size: 12px; margin-top: 5px; font-weight: bold; color: #1a73e8;">Turno de: Isidora</div>
+  </div>
+
+  <div class="challenge-box" id="challenge-panel">
+    <div class="challenge-title">🎯 Desafío Activo</div>
+    <div class="challenge-desc" id="challenge-text">¿Resolvió correctamente el ejercicio?</div>
+    <div>
+      <button class="btn btn-ok" onclick="resolveChallenge(true)">✅ Acertó</button>
+      <button class="btn btn-fail" onclick="resolveChallenge(false)">❌ No acertó</button>
+    </div>
+  </div>
+
+  <h3>Tablero de Juego</h3>
+  <div class="board" id="board"></div>
+
+  <h3>Registro de Actividad</h3>
+  <div class="log-box" id="log-box">
+    <div class="log-entry">🟢 <strong>¡Comienza el juego!</strong> Isidora y Michu inician con $20.000.</div>
+  </div>
+</div>
+
+<script>
+const tilesData = [
+  { num: 0, name: "Inicio", icon: "🏠", type: "start", action: 0, desc: "Salida de casa." },
+  { num: 1, name: "Pasaje Micro", icon: "🚌", type: "normal", action: -1000, desc: "Cargas la tarjeta Bip!" },
+  { num: 2, name: "Avenida", icon: "🏙️", type: "normal", action: 0, desc: "Miras vitrinas en la calle." },
+  { num: 3, name: "OCA Micro", icon: "🚌", type: "oca", action: -800, moveTo: 7, desc: "¡De micro a micro! Avanzas a casilla 7." },
+  { num: 4, name: "Agua Mineral", icon: "💧", type: "normal", action: -1200, desc: "Compras agua en la tienda." },
+  { num: 5, name: "Desafío Azul", icon: "🍞", type: "challenge", action: -3500, desc: "Panadería ($3.500 con $5.000). ¿Cuánto es el vuelto correcto? ($1.500)" },
+  { num: 6, name: "Hallazgo", icon: "🧥", type: "normal", action: 2000, desc: "¡Encuentras $2.000 en tu abrigo!" },
+  { num: 7, name: "Paradero", icon: "🚏", type: "normal", action: 0, desc: "Te encuentras con tus amigas." },
+  { num: 8, name: "OCA Panorama", icon: "🎉", type: "oca", action: 0, moveTo: 12, desc: "¡De panorama en panorama! Avanzas a casilla 12." },
+  { num: 9, name: "Cine", icon: "🎟️", type: "normal", action: -4500, desc: "Compras entrada de cine." },
+  { num: 10, name: "Fila Cine", icon: "👥", type: "normal", action: 0, desc: "Conversas en la fila." },
+  { num: 11, name: "Cabritas", icon: "🍿", type: "normal", action: -3000, desc: "Compras snacks para compartir." },
+  { num: 12, name: "Exposición", icon: "🎨", type: "normal", action: 0, desc: "Visitas feria de arte (gratis)." },
+  { num: 13, name: "Desafío Verde", icon: "🧁", type: "challenge", action: 3000, desc: "Venta repostería. ¿Calculó bien la suma de $3.000?" },
+  { num: 14, name: "Cumpleaños", icon: "🎁", type: "normal", action: -2000, desc: "Cuota común para regalo." },
+  { num: 15, name: "OCA Micro", icon: "🚌", type: "oca", action: -800, moveTo: 20, desc: "¡De micro a micro! Avanzas a casilla 20." },
+  { num: 16, name: "Mochila", icon: "🎒", type: "normal", action: 0, desc: "Buscas tu billetera en la mochila." },
+  { num: 17, name: "Transferencia", icon: "📱", type: "normal", action: 3000, desc: "Te devuelven un préstamo por App." },
+  { num: 18, name: "Cafetería", icon: "☕", type: "normal", action: -4000, desc: "Compras café y pastel." },
+  { num: 19, name: "Desafío Amarillo", icon: "🧃", type: "challenge", action: -3000, desc: "Cuenta dividida de $6.000 entre 2. ¿Sabe cuánto debe pagar cada una? ($3.000)" },
+  { num: 20, name: "Plaza", icon: "🌳", type: "normal", action: 0, desc: "Música en vivo en la plaza." },
+  { num: 21, name: "Feria Accesorio", icon: "💍", type: "normal", action: -3500, desc: "Compras un adorno en la feria." },
+  { num: 22, name: "OCA Panorama", icon: "🎶", type: "oca", action: 0, moveTo: 26, desc: "¡De panorama en panorama! Avanzas a casilla 26." },
+  { num: 23, name: "Propina", icon: "🪙", type: "normal", action: -500, desc: "Dejas propina al Garzón." },
+  { num: 24, name: "Descuento", icon: "🏷️", type: "normal", action: 1000, desc: "Usas un cupón de ahorro." },
+  { num: 25, name: "Desafío Azul", icon: "💊", type: "challenge", action: -2800, desc: "Farmacia $2.800. ¿Seleccionó los billetes y monedas exactos?" },
+  { num: 26, name: "Helado", icon: "🍦", type: "normal", action: -1500, desc: "Tomas un helado en la plaza." },
+  { num: 27, name: "Aporte", icon: "🧹", type: "normal", action: 4000, desc: "Aporte por ayudar en el hogar." },
+  { num: 28, name: "Carga Bip!", icon: "💳", type: "normal", action: -1000, desc: "Cargas la tarjeta de transporte." },
+  { num: 29, name: "OCA Micro", icon: "🚌", type: "oca", action: 0, moveTo: 33, desc: "¡De micro a micro! Avanzas a casilla 33." },
+  { num: 30, name: "Farmacia", icon: "💄", type: "normal", action: -1800, desc: "Compras un labial en farmacia." },
+  { num: 31, name: "Orden", icon: "👛", type: "normal", action: 0, desc: "Ordenas los billetes en tu billetera." },
+  { num: 32, name: "Alcancía", icon: "🪙", type: "normal", action: -2000, desc: "Guardas $2.000 en tu alcancía." },
+  { num: 33, name: "Micro Casa", icon: "🚌", type: "normal", action: -800, desc: "Pasaje de micro a casa." },
+  { num: 34, name: "Recuento", icon: "📊", type: "normal", action: 0, desc: "Revisas tu efectivo sobrante." },
+  { num: 35, name: "META", icon: "🏁", type: "meta", action: 0, desc: "¡Llegaste a Casa! Juego terminado." }
+];
+
+let players = [
+  { name: "Isidora", pos: 0, balance: 20000, tagClass: "tag-p1" },
+  { name: "Michu", pos: 0, balance: 20000, tagClass: "tag-p2" }
+];
+let turn = 0;
+let pendingChallengeAction = 0;
+
+function toggleFullScreen() {
+  const elem = document.getElementById('game-container');
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  tilesData.forEach(tile => {
+    const tileDiv = document.createElement('div');
+    tileDiv.className = `tile ${tile.type}`;
+    
+    let tagsHtml = '';
+    players.forEach((p) => {
+      if (p.pos === tile.num) {
+        tagsHtml += `<span class="player-tag ${p.tagClass}">${p.name}</span>`;
+      }
+    });
+
+    tileDiv.innerHTML = `
+      <div class="tile-num">${tile.num}</div>
+      <div class="tile-icon">${tile.icon}</div>
+      <div>${tile.name}</div>
+      <div class="tags-container">${tagsHtml}</div>
+    `;
+    boardEl.appendChild(tileDiv);
+  });
+}
+
+function updateUI() {
+  document.getElementById('bal-0').innerText = players[0].balance.toLocaleString('es-CL');
+  document.getElementById('bal-1').innerText = players[1].balance.toLocaleString('es-CL');
+  document.getElementById('card-p0').className = `p-card ${turn === 0 ? 'active-turn' : ''}`;
+  document.getElementById('card-p1').className = `p-card ${turn === 1 ? 'active-turn' : ''}`;
+  document.getElementById('turn-info').innerText = `Turno de: ${players[turn].name}`;
+  renderBoard();
+}
+
+function addLog(msg) {
+  const logBox = document.getElementById('log-box');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = msg;
+  logBox.prepend(entry);
+}
+
+function rollDice() {
+  let p = players[turn];
+  if (p.pos >= 35) {
+    alert(`${p.name} ya llegó a la meta.`);
+    turn = (turn === 0) ? 1 : 0;
+    updateUI();
+    return;
+  }
+
+  const dice = Math.floor(Math.random() * 6) + 1;
+  p.pos += dice;
+  if (p.pos > 35) p.pos = 35;
+
+  let tile = tilesData[p.pos];
+  let logText = `🎲 <strong>${p.name}</strong> sacó <strong>${dice}</strong> y cayó en <strong>${tile.icon} Casilla ${tile.num} (${tile.name})</strong>. ${tile.desc}`;
+  
+  if (tile.type === "challenge") {
+    pendingChallengeAction = tile.action;
+    document.getElementById('challenge-text').innerHTML = `<strong>${p.name}:</strong> ${tile.desc}`;
+    document.getElementById('challenge-panel').style.display = 'block';
+    document.getElementById('controls-panel').style.display = 'none';
+    addLog(logText);
+  } else {
+    if (tile.action !== 0) {
+      p.balance += tile.action;
+      let actionSign = tile.action > 0 ? '+$' + tile.action : '-$' + Math.abs(tile.action);
+      logText += ` [Billetera: ${actionSign}]`;
+    }
+    addLog(logText);
+
+    if (tile.moveTo) {
+      setTimeout(() => {
+        p.pos = tile.moveTo;
+        let ocaTile = tilesData[p.pos];
+        addLog(`✨ <strong>Efecto OCA para ${p.name}:</strong> Avanza a <strong>${ocaTile.icon} Casilla ${ocaTile.num} (${ocaTile.name})</strong>.`);
+        if (ocaTile.action !== 0) {
+          p.balance += ocaTile.action;
+        }
+        updateUI();
+      }, 800);
+    }
+
+    if (p.pos === 35) {
+      addLog(`🎉 <strong>¡${p.name} ha llegado a la Meta!</strong> Saldo final: $${p.balance.toLocaleString('es-CL')}`);
+    }
+
+    turn = (turn === 0) ? 1 : 0;
+    updateUI();
+  }
+}
+
+function resolveChallenge(success) {
+  let p = players[turn];
+  if (success) {
+    p.balance += pendingChallengeAction;
+    let actionSign = pendingChallengeAction > 0 ? '+$' + pendingChallengeAction : '-$' + Math.abs(pendingChallengeAction);
+    addLog(`✅ <strong>${p.name} acertó el desafío.</strong> [Billetera: ${actionSign}]`);
+  } else {
+    addLog(`❌ <strong>${p.name} no acertó el desafío.</strong> No se altera el saldo de la billetera.`);
+  }
+
+  document.getElementById('challenge-panel').style.display = 'none';
+  document.getElementById('controls-panel').style.display = 'block';
+
+  if (p.pos === 35) {
+    addLog(`🎉 <strong>¡${p.name} ha llegado a la Meta!</strong> Saldo final: $${p.balance.toLocaleString('es-CL')}`);
+  }
+
+  turn = (turn === 0) ? 1 : 0;
+  updateUI();
+}
+
+renderBoard();
+</script>
+
+</body>
+</html>
